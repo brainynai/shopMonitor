@@ -35,7 +35,7 @@ def send_email(email_recipient,
         part.add_header('Content-Disposition', "attachment; filename= %s" % filename)
         msg.attach(part)
 
-
+    #Will require gmail option to allow "less secure apps" for the sender account
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
@@ -54,27 +54,28 @@ def send_email(email_recipient,
 def main():
     newproducts, knownproducts = [], []
 
+    #Using a text file to store the products seen last time
     with open('products.txt', 'r') as f:
         for line in f:
             knownproducts.append(line.strip())
 
-    #print(knownproducts)
-            
+    #Get the html of the hardware sale page        
     page = requests.get('https://myshop.senecacollege.ca/collections/its-used-hardware-sale').content
 
+    #Soouuuup
     soup = BeautifulSoup(page, 'lxml')
 
+    #Find all the anchor tags to filter down. Probably could've easily done the filtering in this regex.
     alla = soup.find_all(href=re.compile('.*\/collections\/its-used-hardware-sale.*'))
-    #print(alla)
 
-    #print(len(alla))
-
+    #Pick out just the href value/url
     urls = [str(a)[str(a).find('href="') + 6 : str(a).find('"', str(a).find('href="')+6)] for a in alla]
-    urls = [url for url in urls if url.startswith('/collections') and not url.endswith('atom')]
-    #print(urls)
 
+    #Filters irrelevant tags because I didn't want to play with regex anymore
+    urls = [url for url in urls if url.startswith('/collections') and not url.endswith('atom')]
+
+    #Pick out just the product name (was on the end of the url)
     products = [url[url.rfind('/')+1:] for url in urls]
-    #print(products)
 
 
     with open('products.txt', 'w') as f:
@@ -85,12 +86,15 @@ def main():
 
     if len(newproducts) > 0:
         #print(newproducts)
+
+        #Makes a popup messagebox
         ctypes.windll.user32.MessageBoxW(0, 'Just found these things:\n' + '\n'.join(newproducts), "Shop Monitor Alert", 8192)
+
         #send_email(['myemailforreceiving@gmail.com'], 'New things found on ITS Sale', 'Just found these things:\n' + '\n'.join(newproducts))
     else:
         print('Nothing yet.\n')
 
 while(True):
     main()
-    sleep(60*5)
+    sleep(60*5) #Going to check the site every 5 minutes
 
